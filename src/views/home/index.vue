@@ -3,7 +3,7 @@
     <el-header class="header">
       <div>
         <div class="row-left" style="margin-left: 20px;">
-          <h1>{{ groupName}}</h1>
+          <h1>{{ groupName }}</h1>
         </div>
         <div class="row-left" style="margin-left: 40px;">
           <h2 style="display: inline-block">目标</h2>
@@ -44,8 +44,8 @@
           <span class="task-col">{{ item.name }}</span>
           <!-- <span>{{ item.count }}</span>
           <span>{{ item.time}} </span> -->
-          <el-input class="task-col" v-model="item.count" style="width: 80px;"></el-input>
-          <el-input class="task-col" v-model="item.time" style="width: 80px;"></el-input> 
+          <el-input class="task-col" v-model="item.target" style="width: 80px;" @focus="handleCacheValue(item.target)" @blur="initNumber('target', item)" ></el-input>
+          <el-input class="task-col" v-model="item.time" style="width: 80px;" @focus="handleCacheValue(item.time)" @blur="initNumber('time', item)" ></el-input> 
           <!-- <el-input-number v-model="item.count" controls-position="right" @change="handleChange" :min="1" :max="10"></el-input-number> -->
         </li>
       </ol>
@@ -62,6 +62,7 @@ const addTask = (groupCount, groupTime) => {
   let memberList = ref([])
   let taskCount = ref(0)
   let taskTime = ref(0)
+  let cacheValue = 0
 
   const handleClose = (done) => {
     done()
@@ -105,42 +106,75 @@ const addTask = (groupCount, groupTime) => {
       {
         name: '张三',
         count: 160,
-        time: 200
+        time: 200,
+        target: 0
       },
       {
         name: '李四',
         count: 60,
-        time: 120
+        time: 120,
+        target: 0
       },
       {
         name: '小明',
         count: 120,
-        time: 220
+        time: 220,
+        target: 0
       },
       {
         name: '小强',
         count: 80,
-        time: 110
+        time: 110,
+        target: 0
       }
     ]
   }
 
-  const initTime = () => {
-    taskTime.value = groupTime.value
+  // const taskInputChange = _.debounce(asyncTaskData, 200)
+
+  const asyncTaskData = (sum, type) => {
+    const finished = memberList.value.reduce((memo, item) => {
+      console.log(item[type], memo, 'mmmmmmm')
+      memo += +item[type]
+      return memo
+    }, 0)
+    console.log(sum, '====', finished)
+    return sum - finished
   }
 
-  const initCount = () => {
-    taskCount.value = groupCount.value
+  const handleCacheValue = value => {
+    cacheValue = +value
+    console.log(cacheValue, 'cccccccc', value)
+  }
+
+  const initNumber = (type, obj) => {
+
+    let grouptask = type === 'time' ? groupTime : groupCount
+    let task = type === 'time' ? taskTime : taskCount
+    console.log(task.value)
+    const number = asyncTaskData(grouptask.value, type)
+    
+    if(number < 0) {
+      obj[type] = task.value + cacheValue
+      console.log(memberList.value,'memberList')
+      task.value = 0
+    }else {
+      task.value = number
+    }
   }
 
   const handleGroupConfig = async () => {
     drawerStatus.value = true
-    initTime()
-    initCount()
 
     let data = await getMemberList()
-    console.log(data, 'dddkdkdkdkdkd')
-    memberList.value = data
+
+    memberList.value = data.map(item => {
+      item.target = item.target === 0 ? item.count : item.target
+      return item
+    })
+
+    initNumber('target')
+    initNumber('time')
 
     setupSlip(document.getElementById('tasklist'))
   }
@@ -151,7 +185,10 @@ const addTask = (groupCount, groupTime) => {
     handleGroupConfig,
     memberList,
     taskCount,
-    taskTime
+    taskTime,
+    asyncTaskData,
+    initNumber,
+    handleCacheValue
   }
 
 }
